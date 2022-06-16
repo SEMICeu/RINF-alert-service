@@ -15,7 +15,8 @@ class MainLayout extends Component {
         super(props);
         this.state = {
             country: "BE",
-            data: []
+            data: [],
+            lastUpdateTime: new Date()
         };
         this.graphStore = GraphStore();
     }
@@ -79,16 +80,35 @@ class MainLayout extends Component {
         try {
             const res = await fetch(`http://localhost:8080/rinf-ldes/${this.state.country}`);
             const data = await res.json();
+            const lastUpdateTimes = [];
+            console.log(this.state.lastUpdateTime.toISOString());
             const members = data.members.map(d => {
                 d['dct:isVersionOf'] = BASE_URI + d['dct:isVersionOf'].split('era:')[1];
                 if (d['era:gaugingProfile']) {
-                    d['era:gaugingProfile'] = BASE_URI + d['era:gaugingProfile']['@id'].split('era:')[1];
+                    if (Array.isArray(d['era:gaugingProfile'])) {
+                        d['era:gaugingProfile'] = BASE_URI + d['era:gaugingProfile'][0]['@id'].split('era:')[1];
+                    } else {
+                        d['era:gaugingProfile'] = BASE_URI + d['era:gaugingProfile']['@id'].split('era:')[1];
+                    }
                 };
+                if(new Date(d['dct:modified']) >= this.state.lastUpdateTime) {
+                    d.new = true;
+                    lastUpdateTimes.push(new Date(d['dct:modified']));
+                } else {
+                    d.new = false;
+                }
+
                 return d;
-            }).reverse();
+            }).sort((a, b) => new Date(b['dct:modified']) - new Date(a['dct:modified']));
+
+            if(lastUpdateTimes.length > 0) {
+                const min = lastUpdateTimes.sort((a, b) => new Date(a['dct:modified']) - new Date(b['dct:modified']))[0];
+                this.setState({ lastUpdateTime: min });
+            }
             console.log(members)
             this.setState({ data: [...members] });
-        } catch(err) {
+        } catch (err) {
+            console.log(err);
             console.log(`Not data found for ${this.state.country}`);
             this.setState({ data: [] });
         }
@@ -103,30 +123,82 @@ class MainLayout extends Component {
                         <Table.Column width={700} align="center" fixed>
                             <Table.HeaderCell>URI</Table.HeaderCell>
                             <Table.Cell>
-                             {rowData => <a href={rowData['dct:isVersionOf']}>{rowData['dct:isVersionOf']}</a>}
+                                {rowData => {
+                                    if(rowData.new) {
+                                        return (
+                                            <div style={{ backgroundColor: '#C9DFFE'}}>
+                                                <a href={rowData['dct:isVersionOf']}>{rowData['dct:isVersionOf']}</a>
+                                            </div>
+                                        )
+                                    } else {
+                                        return <a href={rowData['dct:isVersionOf']}>{rowData['dct:isVersionOf']}</a>
+                                    }
+                                }}
                             </Table.Cell>
                         </Table.Column>
                         <Table.Column width={100} align="center" fixed>
                             <Table.HeaderCell><a href="http://data.europa.eu/949/trackId">Track ID</a></Table.HeaderCell>
-                            <Table.Cell dataKey="era:trackId" />
+                            <Table.Cell>
+                                {rowData => {
+                                    if(rowData.new) {
+                                        return (<div style={{ backgroundColor: '#C9DFFE'}}>{rowData['era:trackId']}</div>)
+                                    } else {
+                                        return rowData['era:trackId']
+                                    }
+                                }}
+                            </Table.Cell>
                         </Table.Column>
                         <Table.Column width={200} align="center" fixed>
                             <Table.HeaderCell><a href="http://data.europa.eu/949/maximumPermittedSpeed">Maximum permitted speed</a></Table.HeaderCell>
-                            <Table.Cell dataKey="era:maximumPermittedSpeed" />
+                            <Table.Cell>
+                                {rowData => {
+                                    if(rowData.new) {
+                                        return (<div style={{ backgroundColor: '#C9DFFE'}}>{rowData['era:maximumPermittedSpeed']}</div>)
+                                    } else {
+                                        return rowData['era:maximumPermittedSpeed']
+                                    }
+                                }}
+                            </Table.Cell>
                         </Table.Column>
                         <Table.Column width={400} align="center" fixed>
                             <Table.HeaderCell><a href="http://data.europa.eu/949/gaugingProfile">Gauging Profile</a></Table.HeaderCell>
                             <Table.Cell>
-                                {rowData => <a href={rowData['era:gaugingProfile']}>{rowData['era:gaugingProfile']}</a>}
+                                {rowData => {
+                                    if(rowData.new) {
+                                        return (
+                                            <div style={{ backgroundColor: '#C9DFFE'}}>
+                                                <a href={rowData['era:gaugingProfile']}>{rowData['era:gaugingProfile']}</a>
+                                            </div>
+                                        )
+                                    } else {
+                                        return <a href={rowData['era:gaugingProfile']}>{rowData['era:gaugingProfile']}</a>
+                                    }
+                                }}
                             </Table.Cell>
                         </Table.Column>
                         <Table.Column width={200} align="center" fixed>
                             <Table.HeaderCell><a href="http://data.europa.eu/949/cantDeficiency">Cant Deficiency</a></Table.HeaderCell>
-                            <Table.Cell dataKey="era:cantDeficiency" />
+                            <Table.Cell>
+                                {rowData => {
+                                    if(rowData.new) {
+                                        return (<div style={{ backgroundColor: '#C9DFFE'}}>{rowData['era:cantDeficiency']}</div>)
+                                    } else {
+                                        return rowData['era:cantDeficiency']
+                                    }
+                                }}
+                            </Table.Cell>
                         </Table.Column>
                         <Table.Column width={300} align="center" fixed>
                             <Table.HeaderCell>Last Modified</Table.HeaderCell>
-                            <Table.Cell dataKey="dct:modified" />
+                            <Table.Cell>
+                                {rowData => {
+                                    if(rowData.new) {
+                                        return (<div style={{ backgroundColor: '#C9DFFE'}}>{rowData['dct:modified']}</div>)
+                                    } else {
+                                        return rowData['dct:modified']
+                                    }
+                                }}
+                            </Table.Cell>
                         </Table.Column>
                     </Table>
                 </Container>
